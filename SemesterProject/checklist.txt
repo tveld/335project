@@ -1,0 +1,30 @@
+Project Checkoff
+
+1.) Preliminary analysis
+    X read in all three tables
+    - outliers
+    - box plots / 5 number summary
+    - correlation matrix
+    - discretization (Yes or No)
+    - new columns (Yes or No)
+    - conversions (If so, what)
+   
+2.) Questions for us
+
+    1. How should they segment their customers
+       into groups?
+    - k means (what was a good k?)
+    - Any variable excluded?
+    
+    2. How to identify customers that pay late.
+      - Need to provide classifier
+      - how accurate is the classifier
+      - Need to provide general idea of customer
+    
+    3. best way to discount items to increase          sales of another product.
+      - associative analysis
+      - what rules were most accurate?
+      
+3.) Questions for Scripps
+  - need 5 questions for Scripps
+    
