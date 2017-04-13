@@ -1,12 +1,46 @@
 Project Checkoff
+# = Done
 
 1.) Preliminary analysis
-    X read in all three tables
-    - outliers
-    - box plots / 5 number summary
+    # read in all three tables
+    - bar chart
+      # cust: units by product
+      # cust: sales by product
+      # cust: profits by product
+      # cust: units sold by organization
+      # cust: sales by organization
+      # cust: profits by organization
+      
+    - scatter plot
+      - prod1 through prod9
+      - days late
+      - outliers (Yes or No)
+    
     - correlation matrix
+    
+    - new columns 
+      # products: profit
+      # products: prodCost
+      # products: prodSales
+      # products: prodProfit
+      # products: %ofTotSales
+      # products: %ofTotProfit
+      # custs: prod[N]Sales
+      # custs: prod[N]Profit
+      # custs: custSales
+      # custs: custProfit
+      
+    
+    - parallel coordinate plots
+      - cust: attributes by organization
+      
+    
+    - box plots / 5 number summary
+    
+    
+    
     - discretization (Yes or No)
-    - new columns (Yes or No)
+    
     - conversions (If so, what)
    
 2.) Questions for us
