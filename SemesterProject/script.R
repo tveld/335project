@@ -331,9 +331,65 @@ table(clst$cluster, iris[,5])
 ans = matrix(0,14,2)
 ans[1,1] = 2
 
+# final k means
+seg = custs[3:14]
+kseg = kmeans(seg, 4)
+seg$cls = kseg$cluster
+seg1 = seg[seg$cls == 1,]
+seg2 = seg[seg$cls == 2,]
+seg3 = seg[seg$cls == 3,]
+seg4 = seg[seg$cls == 4,]
+
+# barplot for 1
+s1 = colSums(seg1[1:10])
+name = c("1","2","3","4","5","6","7","8","9","10")
+s1 = setNames(s1,name)
+barplot(
+  s1, 
+  main="Customer Group 1",
+  xlab="Product Type",
+  ylab="Units Sold",
+  col=rainbow(10)
+)
+# barplot for 2
+s2 = colSums(seg2[1:10])
+name = c("1","2","3","4","5","6","7","8","9","10")
+s2 = setNames(s2,name)
+barplot(
+  s2, 
+  main="Customer Group 2",
+  xlab="Product Type",
+  ylab="Units Sold",
+  col=rainbow(10)
+)
+# barplot for 3
+s3 = colSums(seg3[1:10])
+name = c("1","2","3","4","5","6","7","8","9","10")
+s3 = setNames(s3,name)
+barplot(
+  s3, 
+  main="Customer Group 3",
+  xlab="Product Type",
+  ylab="Units Sold",
+  col=rainbow(10)
+)
 
 
-#####################################################################
+# barplot for 4
+s4 = colSums(seg4[1:10])
+name = c("1","2","3","4","5","6","7","8","9","10")
+s4 = setNames(s4,name)
+barplot(
+  s4, 
+  main="Customer Group 4",
+  xlab="Product Type",
+  ylab="Units Sold",
+  col=rainbow(10)
+)
+
+
+
+###################################################################
 #
 # 2. Identifying Late Customers
 #    Basics & Classifier
@@ -416,10 +472,45 @@ plotcp(fit)
 predict(fit, custs, type="class")
 mean(trypredict == (custs$daysLate > 60))
 
+# classification with SVM
+# kind of works with threshold of 20
+# horrible at predicting
+install.packages("e1071")
+library(e1071)
+
+#build customer table with profits for each product, total profit, type, and late class
+pred = custs[25:34]
+pred["type"] = custs[2]
+pred["late"] = custs[14]
+pred[pred$late<20, 12] = 0
+pred[pred$late>=20, 12] = 1
+pred[pred$late == 0,12] = "Early"
+pred[pred$late == 1,12] = "Late"
+
+#pred = custs[36]
+#pred["type"] = custs[2]
+#pred["late"] = custs[14]
+#pred[pred$late<20, 3] = 0
+#pred[pred$late>=20, 3] = 1
+#pred[pred$late == 0,3] = "Early"
+#pred[pred$late == 1,3] = "Late"
 
 
+pred$late = factor(pred$late)
+
+# build training and test datasets
+train.indeces = sample(1:nrow(pred), 1000)
+pred.train = pred[train.indeces,]
+pred.test = pred[-train.indeces,]
+
+model = svm(late ~., data = pred.train)
+results = predict(object = model, newdata = data.frame(pred.test), type="class")
+
+# confusion matrix
+con = table(results, pred.test$late)
 #####################################################################
 #
+
 # 3. Discount to Increase Sales
 #    (similar to 1.)
 #
