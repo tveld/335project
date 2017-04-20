@@ -4,10 +4,13 @@
 
 
 #####################################################################
+#
 # Read in data files
+#
+#
 #####################################################################
 
-
+#
 custs = read.table(
   "custs.txt", 
   header=TRUE,
@@ -21,7 +24,12 @@ trans = read.table(
   sep=",",
   fill=TRUE
 )
+#as transaction basket
+library(arules)
+transdata = read.transactions("trans.txt", format="basket", sep=",")
 
+
+#read products
 product = read.table(
   "product.txt", 
   header=FALSE,
@@ -89,7 +97,10 @@ custs["custProfit"] =
 
 
 #####################################################################
+#
 # Preliminary analysis
+#
+#
 #####################################################################
 
 
@@ -106,6 +117,7 @@ barplot(
 # why the difference?
 # think it's because this one does not bin by product
 # not sure how to fix it
+
 # bar: units sold by product
 barplot(
   product$sold, 
@@ -168,7 +180,7 @@ barplot(
 
 # bar: profits earned by gov customers
 govattr = custs[custs$org == "g",]
-govprofit = colSums(govattr[25:34])
+govprofit = colSums(govattr[,25:34])
 ms = c("1","2","3","4","5","6","7","8","9","10")
 govprofit = setNames(govprofit,nms)
 barplot(
@@ -199,7 +211,7 @@ bussales = colSums(busattr[15:24])
 ms = c("1","2","3","4","5","6","7","8","9","10")
 bussales = setNames(bussales,nms)
 barplot(
-  bussums[0:9], 
+  bussales, 
   main="Sales from Business Customers",
   xlab="Product Type",
   ylab="Sales",
@@ -208,7 +220,7 @@ barplot(
 
 # bar: profits by bus customers
 busattr = custs[custs$org == "b",]
-busprofit = colSums(busattr[25:34])
+busprofit = colSums(busattr[,25:34])
 ms = c("1","2","3","4","5","6","7","8","9","10")
 busprofit = setNames(busprofit,nms)
 barplot(
@@ -224,6 +236,19 @@ barplot(
 library(MASS)
 orgsums = aggregate(. ~ custs$org, data=custs, FUN=sum)
 parcoord(orgsums)
+
+#bar: profits by gov & bus customers
+x_name <- "busprofit"
+y_name <- "govprofit"
+df <- data.frame(busprofit,govprofit)
+names(df) <- c(x_name,y_name)
+barplot(as.matrix(df), main="Profits Earned by Business and Government Customers",
+        xlab="Product Type", 
+        ylab = "Profits Earned", 
+        col=rainbow(10),
+        legend = rownames(counts), 
+        beside=TRUE)
+
 
 # boxplot: days late
 # note the outliers
@@ -261,3 +286,172 @@ boxplot(
 
 
 
+#####################################################################
+#
+# 1. Segment Customers Into Groups
+#    Basics & Classifier
+#
+#
+#####################################################################
+
+# k clusters setup
+k = 10
+
+# k-means cluster of customers
+custCluster = matrix(nrow = k, ncol = 2)
+for(i in 2:k){
+  clst = kmeans(custs[,3:14], i)
+  custCluster[i-1,1] = i
+  custCluster[i-1,2] = clst$tot.withinss
+}
+plot(custCluster[,1], custCluster[,2])
+
+# k-means customer by government
+govCluster = matrix(nrow = k, ncol = 2)
+for(i in 2:k){
+  clst = kmeans(custs[custs$org == "g",3:14], i)
+  govCluster[i-1,1] = i
+  govCluster[i-1,2] = clst$tot.withinss
+}
+plot(govCluster[,1], govCluster[,2])
+
+# k-means customer by business
+busCluster = matrix(nrow = k, ncol = 2)
+for(i in 2:k){
+  clst = kmeans(custs[custs$org == "b",3:14], i)
+  busCluster[i-1,1] = i
+  busCluster[i-1,2] = clst$tot.withinss
+}
+plot(busCluster[,1], busCluster[,2])
+
+# cluster visualizations
+clst = kmeans(custs[,3:14], 4)
+x=cbind(custs[1,4], cluster)
+table(clst$cluster, iris[,5])
+ans = matrix(0,14,2)
+ans[1,1] = 2
+
+
+
+#####################################################################
+#
+# 2. Identifying Late Customers
+#    Basics & Classifier
+#
+#
+#####################################################################
+
+
+# boxplot: days late
+boxplot(
+  custs$daysLate ~ custs$org, 
+  main="Days Late by Organization Type", 
+  xlab="Organization", 
+  ylab="Days Late"
+)
+
+# 5 number summaries
+summary(custs$daysLate)
+
+onTime = custs[(custs$daysLate < 60),]
+late = custs[(custs$daysLate >= 60),]
+summary(onTime$daysLate)
+summary(late$daysLate)
+
+# bar: profits by product for late people vs non-late
+profitLate = colSums(late[25:34])
+profitOnTime = colSums(onTime[25:34])
+nms = c("1","2","3","4","5","6","7","8","9","10")
+prep = as.matrix(data.frame(profitLate, profitOnTime))
+barplot(
+  prep, 
+  main="Profits Earned by Product",
+  xlab="Product Type",
+  ylab="Profit",
+  col=rainbow(10),
+  beside = TRUE
+)
+
+
+# bar: lateness by organization type
+govOnTime = nrow(govattr[(govattr$daysLate < 60),])
+govLate = nrow(govattr[(govattr$daysLate >= 60),])
+busOnTime = nrow(busattr[(busattr$daysLate < 60),])
+busLate = nrow(busattr[(busattr$daysLate >= 60),])
+
+prep = as.matrix(data.frame(govOnTime, govLate, busOnTime, busLate))
+barplot(
+  prep, 
+  main="Profits Earned by Product",
+  xlab="Product Type",
+  ylab="Profit",
+  col=rainbow(10),
+  beside = TRUE
+)
+
+govLate / govOnTime
+busLate / busOnTime
+
+
+# Decision Tree Classification
+# Success: discretize daysLate
+# Failure: Decision Tree does not make any nodes??
+library(rpart)
+discriminate = custs
+
+#t = table(discretize(discriminate$daysLate, method="cluster", categories=2))
+#hist(t, breaks=20, main="K-Means")
+#a = abline(v=discretize(discriminate$daysLate, method="cluster", categories=2, onlycuts=TRUE), 
+#       col="red")
+
+#discriminate$daysLate <- discretize(discriminate[, 14], method = "interval", categories = 2)
+#discriminate$daysLate = as.factor(discriminate$daysLate)
+
+discriminate[discriminate$daysLate<60, 14] = 0
+discriminate[discriminate$daysLate>=60, 14] = 1
+
+fit = rpart(daysLate ~ org + prod0 + prod1 + prod2 + prod3 + prod4 + prod5 + prod6 + prod7 + prod8 + prod9,
+            method="class", data=discriminate)
+plotcp(fit)
+predict(fit, custs, type="class")
+mean(trypredict == (custs$daysLate > 60))
+
+
+
+#####################################################################
+#
+# 3. Discount to Increase Sales
+#    (similar to 1.)
+#
+#
+#####################################################################
+
+# assotiative analysis
+inspect(transdata)
+ruls = apriori(transdata, parameter=list(support=.2, confidence=.5))
+inspect(ruls)
+
+# Correlations of Product:  Scatterplot Matrices from the glus Package
+install.packages("gclus")
+library(gclus)
+productHold = product
+productHold.r <- abs(cor(product)) # get correlations
+productHold.col <- dmat.color(productHold.r) # get colors
+# reorder variables so those with highest correlation
+# are closest to the diagonal
+productHold.o <- order.single(productHold.r)
+cpairs(productHold, productHold.o, panel.colors=productHold.col, gap=.5,
+       main="Correlations of Product Ordered and Colored" )
+
+# Correlations of Custs:  Scatterplot Matrices from the glus Package
+custsHold = custs[,c(1,3:13)]
+custsHold.r <- abs(cor(custsHold)) # get correlations
+custsHold.col <- dmat.color(custsHold.r) # get colors
+# reorder variables so those with highest correlation
+# are closest to the diagonal
+custsHold.o <- order.single(custsHold.r)
+cpairs(custsHold, custsHold.o, panel.colors=custsHold.col, gap=.5,
+       main="Correlations of Custs Ordered and Colored" )
+
+# Correlation Values for 9,0,3,5,8,7
+cor(custs[,c(12,3,6,8,11,10)])
